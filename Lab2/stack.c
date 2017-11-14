@@ -52,6 +52,10 @@ void stack_init(stack_tt *stack)
 {
   nodeNr = 0;
   stack->head = NULL;
+  
+  #if NON_BLOCKING == 0
+    pthread_mutex_init(&stack->lock, NULL);
+  #endif
 }
 
 void stack_print(stack_tt *stack){
@@ -90,7 +94,13 @@ stack_push(stack_tt *stack, int value)
 
 #if NON_BLOCKING == 0
   // Implement a lock_based stack
-  pthread_mutex_lock(&stack->lock);
+  int status = pthread_mutex_lock(&stack->lock);
+
+  while(status != 0){
+    status = pthread_mutex_lock(&stack->lock);
+    printf("%d\n", status);
+  }
+
   newNode->next = stack->head;
   stack->head = newNode;
   pthread_mutex_unlock(&stack->lock);
@@ -122,16 +132,15 @@ stack_push(stack_tt *stack, int value)
 int /* Return the type you prefer */
 stack_pop(stack_tt *stack)
 {
-if (stack->head->next)
-  return -1;
+  if (stack->head == NULL){
+    printf("\nWARNING::Tried to pop empty stack\n");
+    return -1;
+  }
 
 #if NON_BLOCKING == 0
 
   pthread_mutex_lock(&stack->lock);
-
-  stack->head->next = stack->head->next->next;
-  free(stack->head->next);
-  
+  stack->head = stack->head->next;
   pthread_mutex_unlock(&stack->lock);
 
 #elif NON_BLOCKING == 1

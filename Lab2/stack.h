@@ -56,6 +56,7 @@ typedef struct stack stack_tt;
 int stack_push(stack_tt *stack, int value);
 int stack_pop(stack_tt *stack);
 void stack_print(stack_tt *stack);
+void stack_init(stack_tt *stack);
 
 /* Use this to check if your stack is in a consistent state from time to time */
 int stack_check(stack_tt *stack);

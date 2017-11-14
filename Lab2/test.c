@@ -130,17 +130,13 @@ test_setup()
 
   // Allocate a new stack and reset its values
   stack = malloc(sizeof(stack_tt));
-  //stack_init(*stack);
+  stack_init(stack);
 
 }
 
 void
 test_teardown()
 {
-  for(int i=0; i<NB_THREADS; i++){
-
-  }
-
   free(stack);
 }
 
@@ -155,11 +151,11 @@ test_finalize()
 void *thread_stack_push(void* arg){
   stack_measure_arg_t *args = (stack_measure_arg_t*) arg;
   int id = args->id;
-  
+
   size_t i;
   for (i = 0; i < (MAX_PUSH_POP/NB_THREADS); i++)
   {
-    stack_push(stack, i);
+    stack_push(stack, id);
   }
 
   return NULL;
@@ -169,13 +165,11 @@ int
 test_push_safe()
 {
   stack_measure_arg_t args[NB_THREADS];
-
   // Initialize threads
   pthread_t thread[NB_THREADS];
   pthread_attr_t attr;
   pthread_attr_init(&attr);
 
-  // Create threads
   size_t i;
   for (i = 0; i < NB_THREADS; i++)
   {
@@ -187,20 +181,84 @@ test_push_safe()
   for(i=0; i<NB_THREADS; i++){
       pthread_join(thread[i], NULL);
   }
-  
+
+  int stack_sum = 0;
+
+  node_tt *tmp = stack->head;
+  while(tmp != NULL){
+    stack_sum += tmp->value;
+    tmp = tmp->next;
+  }
+  free(tmp);
+
+  int real_sum = 0;
+  for(int i=0; i<NB_THREADS; i++){
+    real_sum += i * (MAX_PUSH_POP / NB_THREADS);
+  }
+
 
   // check if the stack is in a consistent state
-  int res = assert(stack_check(stack));
+  int res = assert(stack_sum == real_sum);
   return res;
+}
+
+// Pop from one thread
+void *thread_stack_pop(void *arg)
+{
+  // stack_measure_arg_t *args = (stack_measure_arg_t *)arg;
+  // int id = args->id;
+
+  size_t i;
+  for (i = 0; i < (MAX_PUSH_POP / NB_THREADS); i++)
+  {
+    stack_pop(stack);
+  }
+
+  return NULL;
 }
 
 int
 test_pop_safe()
 {
-  // Same as the test above for parallel pop operation
-  int res = stack_check(stack);
+  // Fill stack with values;
+  size_t i;
+  for(int i=0; i<MAX_PUSH_POP; i++){
+    stack_push(stack, i);
+  }
 
-  return res;
+  // Ensure that the stack has been initialized correctly
+  node_tt *ptr = malloc(sizeof(node_tt));
+  ptr = stack->head;
+  int count = 0;
+  while(ptr){
+    count++;
+    ptr = ptr->next;
+  }
+
+  if(count != MAX_PUSH_POP)
+    return 0;
+
+  // Start poping nodes
+  stack_measure_arg_t args[NB_THREADS];
+  // Initialize threads
+  pthread_t thread[NB_THREADS];
+  pthread_attr_t attr;
+  pthread_attr_init(&attr);
+
+  for (i = 0; i < NB_THREADS; i++)
+  {
+    args[i].id = i;
+    pthread_create(&thread[i], &attr, &thread_stack_pop, (void *)&args[i]);
+  }
+
+  // Wait for all threads to finish before proceeding
+  for(i=0; i<NB_THREADS; i++){
+      pthread_join(thread[i], NULL);
+  }
+  
+  stack_print(stack);
+
+  return 1;
 }
 
 // 3 Threads should be enough to raise and detect the ABA problem
