@@ -39,7 +39,6 @@ typedef struct node node_tt;
 // Single linked list where tail = NULL
 struct stack
 {
-  int length;
   node_tt *head;
 
   #if NON_BLOCKING == 0
@@ -54,7 +53,7 @@ struct stack
 };
 typedef struct stack stack_tt;
 
-int stack_push(stack_tt *stack, node_tt *node);
+int stack_push(stack_tt *stack, int value);
 int stack_pop(stack_tt *stack);
 void stack_print(stack_tt *stack);
 

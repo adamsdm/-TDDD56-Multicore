@@ -45,15 +45,23 @@
 #endif
 #endif
 
+static node_tt nodePool[MAX_PUSH_POP];
+_Atomic static size_t nodeNr;
+
+void stack_init(stack_tt *stack)
+{
+  nodeNr = 0;
+  stack->head = NULL;
+}
+
 void stack_print(stack_tt *stack){
 
-  node_tt *ptr = stack->head;
-
-  while(ptr){
-    printf("\n%d", ptr->value);
+  node_tt *tmp = stack->head;
+  while(tmp != NULL){
+    printf("%d\n", tmp->value);
+    tmp = tmp->next;
   }
-
-  free(ptr);
+  free(tmp);
 
 
 }
@@ -75,17 +83,28 @@ stack_check(stack_tt *stack)
 }
 
 int /* Return the type you prefer */
-stack_push(stack_tt *stack, node_tt *node)
+stack_push(stack_tt *stack, int value)
 {
+  node_tt* newNode = &nodePool[nodeNr++];
+  newNode->value = value;
+
 #if NON_BLOCKING == 0
   // Implement a lock_based stack
   pthread_mutex_lock(&stack->lock);
-  node->next = stack->head;
-  stack->head = node;
+  newNode->next = stack->head;
+  stack->head = newNode;
   pthread_mutex_unlock(&stack->lock);
 
 #elif NON_BLOCKING == 1
   // Implement a harware CAS-based stack
+  
+  // node_tt* old = stack->head->next;
+  // node->next = old;
+
+  // while (cas((size_t *) &stack->head, (size_t) old, (size_t) node) != (size_t)old){
+  //   node_tt* old = stack->head->next;
+  //   node->next = old;
+  // }
 
 #else
   /*** Optional ***/
@@ -103,20 +122,28 @@ stack_push(stack_tt *stack, node_tt *node)
 int /* Return the type you prefer */
 stack_pop(stack_tt *stack)
 {
+if (stack->head->next)
+  return -1;
+
 #if NON_BLOCKING == 0
 
   pthread_mutex_lock(&stack->lock);
 
-  // If not empty
-  if(stack->head->next){
-    stack->head->next = stack->head->next->next;
-    free(stack->head->next);
-  }
-
+  stack->head->next = stack->head->next->next;
+  free(stack->head->next);
+  
   pthread_mutex_unlock(&stack->lock);
 
 #elif NON_BLOCKING == 1
   // Implement a harware CAS-based stack
+  // node_tt *old = stack->head->next;
+  // node_tt *next = old->next;
+
+  // while (cas((size_t *)&stack->head, (size_t)old, (size_t)next) != (size_t)old){
+  //   old = stack->head;
+  //   next = old->next;
+  // }
+
 #else
   /*** Optional ***/
   // Implement a software CAS-based stack

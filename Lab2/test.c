@@ -70,12 +70,13 @@ node_tt *nodes[NB_THREADS];
 
 data_t data;
 
-#if MEASURE != 0
 struct stack_measure_arg
 {
   int id;
 };
 typedef struct stack_measure_arg stack_measure_arg_t;
+
+#if MEASURE != 0
 
 struct timespec t_start[NB_THREADS], t_stop[NB_THREADS], start, stop;
 
@@ -129,15 +130,8 @@ test_setup()
 
   // Allocate a new stack and reset its values
   stack = malloc(sizeof(stack_tt));
-  stack->head = NULL;
+  //stack_init(*stack);
 
-  for(int i=0; i<NB_THREADS; i++){
-    node_tt *tempNode = (node_tt*) malloc(sizeof(node_tt));
-    tempNode->next = NULL;
-    tempNode->value = i;
-    nodes[i] = tempNode;
-
-  }
 }
 
 void
@@ -157,28 +151,47 @@ test_finalize()
   
 }
 
+// Push from one thread
+void *thread_stack_push(void* arg){
+  stack_measure_arg_t *args = (stack_measure_arg_t*) arg;
+  int id = args->id;
+  
+  size_t i;
+  for (i = 0; i < (MAX_PUSH_POP/NB_THREADS); i++)
+  {
+    stack_push(stack, i);
+  }
+
+  return NULL;
+}
+
 int
 test_push_safe()
 {
-  // Make sure your stack remains in a good state with expected content when
-  // several threads push concurrently to it
+  stack_measure_arg_t args[NB_THREADS];
 
-  node_tt *node = malloc(sizeof(node_tt));
-  node->value = 1;
+  // Initialize threads
+  pthread_t thread[NB_THREADS];
+  pthread_attr_t attr;
+  pthread_attr_init(&attr);
 
-  // Do some work
-  stack_push(stack, node);
+  // Create threads
+  size_t i;
+  for (i = 0; i < NB_THREADS; i++)
+  {
+    args[i].id = i;
+    pthread_create(&thread[i], &attr, &thread_stack_push, (void *)&args[i]);
+  }
+
+  // Wait for all threads to finish before proceeding
+  for(i=0; i<NB_THREADS; i++){
+      pthread_join(thread[i], NULL);
+  }
+  
 
   // check if the stack is in a consistent state
   int res = assert(stack_check(stack));
-
-  // check other properties expected after a push operation
-  // (this is to be updated as your stack design progresses)
-  // Now, the test succeeds
-  int t1 = assert(stack->head->value == node->value);
-  int t2 = assert(node->next == NULL);
-
-  return res && t1 && t2;
+  return res;
 }
 
 int
@@ -186,13 +199,6 @@ test_pop_safe()
 {
   // Same as the test above for parallel pop operation
   int res = stack_check(stack);
-  node_tt *ptr = stack->head;
-
-
-  while(ptr){
-    printf("\n%d", ptr->value);
-    ptr = ptr->next;
-  }
 
   return res;
 }
@@ -237,6 +243,7 @@ thread_test_cas(void* arg)
         old = *args->counter;
         local = old + 1;
 #if NON_BLOCKING == 1
+      //} while (cas(args->counter, old, local) != old);
       } while (cas(args->counter, old, local) != old);
 #elif NON_BLOCKING == 2
       } while (software_cas(args->counter, old, local, args->lock) != old);
