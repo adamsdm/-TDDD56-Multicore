@@ -108,13 +108,11 @@ stack_push(stack_tt *stack, int value)
 #elif NON_BLOCKING == 1
   // Implement a harware CAS-based stack
   
-  // node_tt* old = stack->head->next;
-  // node->next = old;
-
-  // while (cas((size_t *) &stack->head, (size_t) old, (size_t) node) != (size_t)old){
-  //   node_tt* old = stack->head->next;
-  //   node->next = old;
-  // }
+  node_tt* old;
+  do {
+    old = stack->head;
+    newNode->next = old;
+  } while (cas((size_t *)&stack->head, (size_t)old, (size_t)newNode) != (size_t)old);
 
 #else
   /*** Optional ***/
@@ -133,7 +131,6 @@ int /* Return the type you prefer */
 stack_pop(stack_tt *stack)
 {
   if (stack->head == NULL){
-    printf("\nWARNING::Tried to pop empty stack\n");
     return -1;
   }
 
@@ -145,13 +142,13 @@ stack_pop(stack_tt *stack)
 
 #elif NON_BLOCKING == 1
   // Implement a harware CAS-based stack
-  // node_tt *old = stack->head->next;
-  // node_tt *next = old->next;
+  node_tt* old;
+  node_tt* next;
 
-  // while (cas((size_t *)&stack->head, (size_t)old, (size_t)next) != (size_t)old){
-  //   old = stack->head;
-  //   next = old->next;
-  // }
+  do {
+    old = stack->head;
+    next = old->next;
+  } while (cas((size_t*)&stack->head, (size_t)old, (size_t)next) != (size_t)old);
 
 #else
   /*** Optional ***/

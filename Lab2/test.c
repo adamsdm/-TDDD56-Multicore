@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include <time.h>
 #include <stddef.h>
+#include <math.h>
 
 #include "test.h"
 #include "stack.h"
@@ -202,6 +203,9 @@ test_push_safe()
   return res;
 }
 
+
+
+
 // Pop from one thread
 void *thread_stack_pop(void *arg)
 {
@@ -209,7 +213,7 @@ void *thread_stack_pop(void *arg)
   // int id = args->id;
 
   size_t i;
-  for (i = 0; i < (MAX_PUSH_POP / NB_THREADS); i++)
+  for (i = 0; i < (MAX_PUSH_POP / NB_THREADS) + 1; i++)
   {
     stack_pop(stack);
   }
@@ -220,6 +224,7 @@ void *thread_stack_pop(void *arg)
 int
 test_pop_safe()
 {
+
   // Fill stack with values;
   size_t i;
   for(int i=0; i<MAX_PUSH_POP; i++){
@@ -255,10 +260,10 @@ test_pop_safe()
   for(i=0; i<NB_THREADS; i++){
       pthread_join(thread[i], NULL);
   }
-  
-  stack_print(stack);
 
-  return 1;
+
+  int res = assert(stack->head == NULL);
+  return res;
 }
 
 // 3 Threads should be enough to raise and detect the ABA problem
@@ -301,7 +306,6 @@ thread_test_cas(void* arg)
         old = *args->counter;
         local = old + 1;
 #if NON_BLOCKING == 1
-      //} while (cas(args->counter, old, local) != old);
       } while (cas(args->counter, old, local) != old);
 #elif NON_BLOCKING == 2
       } while (software_cas(args->counter, old, local, args->lock) != old);
