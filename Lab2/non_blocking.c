@@ -26,6 +26,8 @@
 #endif
 
 #include <stddef.h>
+#include "non_blocking.h"
+
 
 #if NON_BLOCKING == 1
 
