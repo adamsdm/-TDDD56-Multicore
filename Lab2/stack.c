@@ -84,10 +84,8 @@ stack_check(stack_tt *stack)
 }
 
 int /* Return the type you prefer */
-stack_push(stack_tt *stack, int value)
+stack_push(stack_tt *stack, node_tt *node)
 {
-  node_tt* newNode = malloc(sizeof(node_tt));
-  newNode->value = value;
 
 #if NON_BLOCKING == 0
   // Implement a lock_based stack
@@ -95,11 +93,10 @@ stack_push(stack_tt *stack, int value)
 
   while(status != 0){
     status = pthread_mutex_lock(&stack->lock);
-    printf("%d\n", status);
   }
 
-  newNode->next = stack->head;
-  stack->head = newNode;
+  node->next = stack->head;
+  stack->head = node;
   pthread_mutex_unlock(&stack->lock);
 
 #elif NON_BLOCKING == 1
@@ -108,8 +105,8 @@ stack_push(stack_tt *stack, int value)
   node_tt* old;
   do {
     old = stack->head;
-    newNode->next = old;
-  } while (cas((size_t *)&stack->head, (size_t)old, (size_t)newNode) != (size_t)old);
+    node->next = old;
+  } while (cas((size_t *)&stack->head, (size_t)old, (size_t)node) != (size_t)old);
 
 #else
   /*** Optional ***/

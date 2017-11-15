@@ -53,7 +53,7 @@ struct stack
 };
 typedef struct stack stack_tt;
 
-int stack_push(stack_tt *stack, int value);
+int stack_push(stack_tt *stack, node_tt *node);
 int stack_pop(stack_tt *stack);
 void stack_print(stack_tt *stack);
 void stack_init(stack_tt *stack);
