@@ -268,16 +268,18 @@ test_push_safe()
 // Pop from one thread
 void *thread_stack_pop(void *arg)
 {
+  
   stack_measure_arg_t *args = (stack_measure_arg_t *)arg;
   int id = args->id;
 
   size_t i;
   node_tt *tmp;
+  
   for (i = 0; i < (MAX_PUSH_POP / NB_THREADS); i++)
   {
-    tmp = node_pool[id]->head;
-    stack_push(node_pool[id], tmp);
+    tmp = stack->head;
     stack_pop(stack);
+    stack_push(node_pool[id], tmp);
   }
 
   return NULL;
@@ -291,13 +293,11 @@ test_pop_safe()
   int i, j;
   for(i=0; i<NB_THREADS; i++){
     for(j=0; j< MAX_PUSH_POP/NB_THREADS ; j++){
-      tmp = node_pool[i]->head;
+      tmp = node_pool[i]->head;      
       stack_pop(node_pool[i]);
       stack_push(stack, tmp);
     }
   }
-
-  printf("ASDF");
 
   // Start poping nodes
   stack_measure_arg_t args[NB_THREADS];
@@ -310,6 +310,7 @@ test_pop_safe()
   {
     args[i].id = i;
     pthread_create(&thread[i], &attr, &thread_stack_pop, (void *)&args[i]);
+    pthread_join(thread[i], NULL);
   }
 
   // Wait for all threads to finish before proceeding
