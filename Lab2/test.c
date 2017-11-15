@@ -310,7 +310,6 @@ test_pop_safe()
   {
     args[i].id = i;
     pthread_create(&thread[i], &attr, &thread_stack_pop, (void *)&args[i]);
-    pthread_join(thread[i], NULL);
   }
 
   // Wait for all threads to finish before proceeding
