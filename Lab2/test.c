@@ -435,7 +435,7 @@ setbuf(stdout, NULL);
 
   test_finalize();
 #else
-  int i;
+  
   pthread_t thread[NB_THREADS];
   pthread_attr_t attr;
   stack_measure_arg_t arg[NB_THREADS];
@@ -447,9 +447,15 @@ setbuf(stdout, NULL);
 
   #if MEASURE == 1
     
-  for (i = 0; i < MAX_PUSH_POP; i++) {
-      stack_push(stack, i);
+  node_tt *tmp;
+  int i, j;
+  for(i=0; i<NB_THREADS; i++){
+    for(j=0; j< MAX_PUSH_POP/NB_THREADS ; j++){
+      tmp = node_pool[i]->head;      
+      stack_pop(node_pool[i]);
+      stack_push(stack, tmp);
     }
+  }
     
   #endif
   clock_gettime(CLOCK_MONOTONIC, &start);
