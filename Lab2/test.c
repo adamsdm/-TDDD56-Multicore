@@ -1,4 +1,24 @@
-/*
+
+
+// clock_gettime not defined on osx
+#if defined(__MACH__) && !defined(CLOCK_MONOTONIC)
+#include <sys/time.h>
+#define CLOCK_MONOTONIC 0
+// clock_gettime is not implemented on older versions of OS X (< 10.12).
+// If implemented, CLOCK_REALTIME will have already been defined.
+int clock_gettime(int clk_id, struct timespec *t)
+{
+  struct timeval now;
+  int rv = gettimeofday(&now, NULL);
+  if (rv)
+    return rv;
+  t->tv_sec = now.tv_sec;
+  t->tv_nsec = now.tv_usec * 1000;
+  return 0;
+}
+#endif
+
+  /*
  * stack_test.c
  *
  *  Created on: 18 Oct 2011
@@ -89,14 +109,17 @@ stack_measure_pop(void* arg)
     int i;
 
     clock_gettime(CLOCK_MONOTONIC, &t_start[args->id]);
-    for (i = 0; i < MAX_PUSH_POP / NB_THREADS; i++)
+    for (i = 0; i < (MAX_PUSH_POP / NB_THREADS); i++)
       {
-        // See how fast your implementation can pop MAX_PUSH_POP elements in parallel
+        stack_pop(stack);
       }
     clock_gettime(CLOCK_MONOTONIC, &t_stop[args->id]);
 
     return NULL;
+    
   }
+
+
 #elif MEASURE == 2
 void*
 stack_measure_push(void* arg)
@@ -107,7 +130,7 @@ stack_measure_push(void* arg)
   clock_gettime(CLOCK_MONOTONIC, &t_start[args->id]);
   for (i = 0; i < MAX_PUSH_POP / NB_THREADS; i++)
     {
-        // See how fast your implementation can push MAX_PUSH_POP elements in parallel
+      stack_push(stack, i);
     }
   clock_gettime(CLOCK_MONOTONIC, &t_stop[args->id]);
 
@@ -385,6 +408,17 @@ setbuf(stdout, NULL);
   stack_measure_arg_t arg[NB_THREADS];
   pthread_attr_init(&attr);
 
+  test_setup();
+  
+
+
+  #if MEASURE == 1
+    
+  for (i = 0; i < MAX_PUSH_POP; i++) {
+      stack_push(stack, i);
+    }
+    
+  #endif
   clock_gettime(CLOCK_MONOTONIC, &start);
   for (i = 0; i < NB_THREADS; i++)
     {
@@ -396,11 +430,14 @@ setbuf(stdout, NULL);
 #endif
     }
 
+
   for (i = 0; i < NB_THREADS; i++)
-    {
-      pthread_join(thread[i], NULL);
-    }
+  {
+    pthread_join(thread[i], NULL);
+  }
+  
   clock_gettime(CLOCK_MONOTONIC, &stop);
+  
 
   // Print out results
   for (i = 0; i < NB_THREADS; i++)

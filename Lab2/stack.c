@@ -147,7 +147,7 @@ stack_pop(stack_tt *stack)
 
   do {
     old = stack->head;
-    next = old->next;
+    next = stack->head->next;
   } while (cas((size_t*)&stack->head, (size_t)old, (size_t)next) != (size_t)old);
 
 #else
