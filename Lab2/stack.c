@@ -45,12 +45,9 @@
 #endif
 #endif
 
-static node_tt nodePool[MAX_PUSH_POP];
-_Atomic static size_t nodeNr;
-
 void stack_init(stack_tt *stack)
 {
-  nodeNr = 0;
+ 
   stack->head = NULL;
   
   #if NON_BLOCKING == 0
@@ -89,7 +86,7 @@ stack_check(stack_tt *stack)
 int /* Return the type you prefer */
 stack_push(stack_tt *stack, int value)
 {
-  node_tt* newNode = &nodePool[nodeNr++];
+  node_tt* newNode = malloc(sizeof(node_tt));
   newNode->value = value;
 
 #if NON_BLOCKING == 0

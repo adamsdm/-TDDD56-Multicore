@@ -1,5 +1,4 @@
 
-
 // clock_gettime not defined on osx
 #if defined(__MACH__) && !defined(CLOCK_MONOTONIC)
 #include <sys/time.h>
@@ -96,6 +95,23 @@ struct stack_measure_arg
   int id;
 };
 typedef struct stack_measure_arg stack_measure_arg_t;
+
+
+double timediff(struct timespec *begin, struct timespec *end)
+{
+	double sec = 0.0, nsec = 0.0;
+   if ((end->tv_nsec - begin->tv_nsec) < 0)
+   {
+      sec  = (double)(end->tv_sec  - begin->tv_sec  - 1);
+      nsec = (double)(end->tv_nsec - begin->tv_nsec + 1000000000);
+   } else
+   {
+      sec  = (double)(end->tv_sec  - begin->tv_sec );
+      nsec = (double)(end->tv_nsec - begin->tv_nsec);
+   }
+   return sec + nsec / 1E9;
+}
+
 
 #if MEASURE != 0
 
@@ -216,7 +232,7 @@ test_push_safe()
   free(tmp);
 
   int real_sum = 0;
-  for(int i=0; i<NB_THREADS; i++){
+  for(i=0; i<NB_THREADS; i++){
     real_sum += i * (MAX_PUSH_POP / NB_THREADS);
   }
 
@@ -250,7 +266,7 @@ test_pop_safe()
 
   // Fill stack with values;
   size_t i;
-  for(int i=0; i<MAX_PUSH_POP; i++){
+  for(i=0; i<MAX_PUSH_POP; i++){
     stack_push(stack, i);
   }
 
@@ -439,13 +455,15 @@ setbuf(stdout, NULL);
   clock_gettime(CLOCK_MONOTONIC, &stop);
   
 
+  printf("Time: %f\n", timediff(&start, &stop));
+  
   // Print out results
   for (i = 0; i < NB_THREADS; i++)
     {
-      printf("%i %i %li %i %li %i %li %i %li\n", i, (int) start.tv_sec,
-          start.tv_nsec, (int) stop.tv_sec, stop.tv_nsec,
-          (int) t_start[i].tv_sec, t_start[i].tv_nsec, (int) t_stop[i].tv_sec,
-          t_stop[i].tv_nsec);
+//       printf("%i %i %li %i %li %i %li %i %li\n", i, (int) start.tv_sec,
+//           start.tv_nsec, (int) stop.tv_sec, stop.tv_nsec,
+//           (int) t_start[i].tv_sec, t_start[i].tv_nsec, (int) t_stop[i].tv_sec,
+//           t_stop[i].tv_nsec);
     }
 #endif
 
