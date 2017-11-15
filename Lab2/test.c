@@ -165,7 +165,6 @@ test_init()
 void
 test_setup()
 {
-  
   // Allocate and initialize your test stack before each test
   data = DATA_VALUE;
 
@@ -177,6 +176,7 @@ test_setup()
   size_t j;
   for(i=0; i<NB_THREADS;i++){
     node_pool[i] =  malloc(sizeof(stack_tt));
+    stack_init(node_pool[i]);
     for(j=0; j<(MAX_PUSH_POP/NB_THREADS); j++){
       node_tt *tmp = malloc(sizeof(node_tt));
       tmp->value = j;
@@ -203,12 +203,11 @@ void *thread_stack_push(void* arg){
   stack_measure_arg_t *args = (stack_measure_arg_t*) arg;
   int id = args->id;
   
-  printf("%d\n", id);
-  
+  node_tt *newNode;
   size_t i;
   for (i = 0; i < (MAX_PUSH_POP/NB_THREADS); i++)
   {
-    node_tt *newNode = node_pool[id]->head;
+    newNode = node_pool[id]->head;
     stack_pop(node_pool[id]);
     stack_push(stack, newNode);
   }
@@ -269,12 +268,15 @@ test_push_safe()
 // Pop from one thread
 void *thread_stack_pop(void *arg)
 {
-  // stack_measure_arg_t *args = (stack_measure_arg_t *)arg;
-  // int id = args->id;
+  stack_measure_arg_t *args = (stack_measure_arg_t *)arg;
+  int id = args->id;
 
   size_t i;
-  for (i = 0; i < (MAX_PUSH_POP / NB_THREADS) + 1; i++)
+  node_tt *tmp;
+  for (i = 0; i < (MAX_PUSH_POP / NB_THREADS); i++)
   {
+    tmp = node_pool[id]->head;
+    stack_push(node_pool[id], tmp);
     stack_pop(stack);
   }
 
@@ -284,6 +286,7 @@ void *thread_stack_pop(void *arg)
 int
 test_pop_safe()
 { 
+
   node_tt *tmp;
   int i, j;
   for(i=0; i<NB_THREADS; i++){
@@ -294,6 +297,7 @@ test_pop_safe()
     }
   }
 
+  printf("ASDF");
 
   // Start poping nodes
   stack_measure_arg_t args[NB_THREADS];
@@ -346,6 +350,7 @@ typedef struct thread_test_cas_args thread_test_cas_args_t;
 void*
 thread_test_cas(void* arg)
 {
+  
 #if NON_BLOCKING != 0
   thread_test_cas_args_t *args = (thread_test_cas_args_t*) arg;
   int i;
@@ -421,7 +426,7 @@ setbuf(stdout, NULL);
 // MEASURE == 0 -> run unit tests
 #if MEASURE == 0
   test_init();
-
+  
   test_run(test_cas);
 
   test_run(test_push_safe);

@@ -235,6 +235,7 @@ test_cas()
       args[i].id = i;
       args[i].counter = &counter;
       args[i].lock = &lock;
+      printf("ASDF");
       pthread_create(&thread[i], &attr, &thread_test_cas, (void*) &args[i]);
     }
 

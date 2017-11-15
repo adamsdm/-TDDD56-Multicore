@@ -90,7 +90,6 @@ stack_push(stack_tt *stack, node_tt *node)
 #if NON_BLOCKING == 0
   // Implement a lock_based stack
   int status = pthread_mutex_lock(&stack->lock);
-
   while(status != 0){
     status = pthread_mutex_lock(&stack->lock);
   }
