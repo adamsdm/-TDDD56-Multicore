@@ -321,15 +321,174 @@ test_pop_safe()
   return res;
 }
 
+
+
+
+
+
+
 // 3 Threads should be enough to raise and detect the ABA problem
 #define ABA_NB_THREADS 3
 
-int
-test_aba()
+pthread_mutex_t *aba_locks[4];
+pthread_t thread0;
+pthread_t thread1;
+pthread_t thread2;
+
+void aba_thread_pop(node_tt **n, pthread_mutex_t *mylock, pthread_mutex_t *otherlock)
 {
+  node_tt *old;
+  node_tt *next;
+
+  int loop = 0;
+  do
+  {
+    old = stack->head;
+    next = old->next;
+    
+
+    if (otherlock != NULL)
+      pthread_mutex_unlock(otherlock);
+    if (mylock != NULL)
+      pthread_mutex_lock(mylock);
+
+    loop = cas((size_t *)&stack->head, (size_t)old, (size_t)next) != (size_t)old;
+    if (mylock != NULL)
+      pthread_mutex_unlock(mylock);
+    //unlock
+  } while (loop);
+
+  old->next = NULL;
+  *n = old;
+
+}
+
+  void aba_thread_push(node_tt * n)
+  {
+    node_tt *old;
+    do
+    {
+      old = stack->head;
+      n->next = old;
+    } while (cas((size_t *)&stack->head, (size_t)old, (size_t)n) != (size_t)old);
+  }
+
+  void *aba_thread_0(void *arg)
+  {
+
+    node_tt *n = NULL;
+    // Thread 0 starting pop
+    printf("\nT0: Starts popping A... \n");
+    aba_thread_pop(&n, aba_locks[0],aba_locks[1]);
+    printf("T0: Done popping A \n");
+    printf("T0: Pushing A \n");
+    aba_thread_push(n); // ...once other threads are done
+
+    return NULL;
+  }
+
+  void *aba_thread_1(void *arg)
+  {
+    node_tt *n = NULL;
+
+    // Thread 1 pops A, thread B pops B
+    pthread_mutex_lock(aba_locks[1]);
+    printf("T1: Popping A... ");
+    aba_thread_pop(&n, NULL, NULL);
+    printf("done \n");
+    pthread_mutex_unlock(aba_locks[2]);
+    pthread_mutex_lock(aba_locks[3]);
+
+    // Thread 1 push back A
+    printf("T1: Push A... ");
+    aba_thread_push(n);
+    printf("done\n");
+
+    pthread_mutex_unlock(aba_locks[0]);
+    // Wait for thread 2 to pop B
+
+
+    return NULL;
+  }
+
+  void *aba_thread_2(void *arg)
+  {
+    // wait for t0 to TRY and pop A
+    // wait for t1 to pop A
+    pthread_mutex_lock(aba_locks[2]);    
+    node_tt *n = NULL;
+    printf("T2: Pop B... ");
+    aba_thread_pop(&n, NULL, NULL);
+    printf("done\n");
+    pthread_mutex_unlock(aba_locks[3]);
+    // pop B, Success
+
+    return NULL;
+  }
+
+  int test_aba()
+  {
 #if NON_BLOCKING == 1 || NON_BLOCKING == 2
   int success, aba_detected = 0;
   // Write here a test for the ABA problem
+
+  // Initialize stack with 3 elements
+  stack = malloc(sizeof(stack_tt));
+
+  node_tt *n1 = malloc(sizeof(node_tt));
+  node_tt *n2 = malloc(sizeof(node_tt));
+  node_tt *n3 = malloc(sizeof(node_tt));
+
+  n1->value = 'C';
+  n2->value = 'B';
+  n3->value = 'A';
+
+
+  stack_push(stack, n1);
+  stack_push(stack, n2);
+  stack_push(stack, n3);
+
+
+  // Initialize locks
+  int i;
+  for(i=0; i<4; ++i) {
+    aba_locks[i] = malloc(sizeof(pthread_mutex_t));
+    pthread_mutex_init(aba_locks[i], 0);
+    pthread_mutex_lock(aba_locks[i]);
+  }
+  
+
+  // Initialize threads
+  pthread_attr_t attr;
+  pthread_attr_init(&attr);
+  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);   
+
+  // Start working...
+  pthread_create(&thread0, &attr, &aba_thread_0, NULL);
+  pthread_create(&thread1, &attr, &aba_thread_1, NULL);
+  pthread_create(&thread2, &attr, &aba_thread_2, NULL);
+
+  // thread 0 starting pop
+  // thread 1 pops A, thread 2 pops B
+  // thread 1 pushes A
+
+  // Wait for threads to finish their work
+  pthread_join(thread0, NULL);
+  pthread_join(thread1, NULL);
+  pthread_join(thread2, NULL);
+
+  node_tt *ptr = stack->head;
+
+  while(ptr != NULL){
+    printf("%c ", ptr->value);
+    ptr = ptr->next;
+  }
+
+
+  free(n1);
+  free(n2);
+  free(n3);
+
   success = aba_detected;
   return success;
 #else
@@ -337,6 +496,16 @@ test_aba()
   return 1;
 #endif
 }
+
+
+
+
+
+
+
+
+
+
 
 // We test here the CAS function
 struct thread_test_cas_args
@@ -478,7 +647,7 @@ setbuf(stdout, NULL);
   clock_gettime(CLOCK_MONOTONIC, &stop);
   
 
-  printf("Time: %f\n", timediff(&start, &stop));
+  printf("%d \t %f\n", NB_THREADS, timediff(&start, &stop));
   
   // Print out results
   for (i = 0; i < NB_THREADS; i++)
