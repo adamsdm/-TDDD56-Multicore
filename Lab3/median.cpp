@@ -19,6 +19,8 @@
 
 unsigned char median_kernel(int ox, int oy, size_t stride, const unsigned char *image, size_t elemPerPx)
 {
+	//save kSmallest index instead of value
+
 	float median;
 	size_t size = (ox*2+1)*(oy*2+1);
 
