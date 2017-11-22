@@ -1,0 +1,21 @@
+################################################################################
+#                     ____  _        ____  _   _   ____                        #
+#                    / ___|| | _____|  _ \| | | | |___ \                       #
+#                    \___ \| |/ / _ \ |_) | | | |   __) |                      #
+#                     ___) |   <  __/  __/| |_| |  / __/                       #
+#                    |____/|_|\_\___|_|    \___/  |_____|                      #
+#                                                                              #
+#                        ~ SkePU 2 options Makefile ~                          #
+################################################################################
+
+# NOTE:
+# Override the variables set in Makefile here.
+# DO NOT PUSH MODIFICATIONS TO THIS FILE UPSTREAM unless absolutely neccessary.
+
+LLVM_BIN = /home/auger33/tddd56/bin
+CLANG_HEADERS = /home/auger33/tddd56/clang_headers/
+SKEPU_SRC = ./
+
+CXX = g++
+#OPENCL_FLAGS = 
+
