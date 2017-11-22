@@ -58,7 +58,6 @@ size_t get_device_id()
 
 static unsigned char gaussian_kernel(int o, size_t stride, __local const unsigned char * m, skepu_vec_proxy_float stencil, size_t elemPerPx)
 {
-	float scaling = 1.0 / (o/elemPerPx*2+1) ;
 	float res = 0;
 
 	for(int i = -o; i <= o; i += elemPerPx){

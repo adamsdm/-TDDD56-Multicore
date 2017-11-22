@@ -167,7 +167,6 @@ constexpr skepu2::AccessMode skepu2_userfunction_conv_average_kernel_1d::anyAcce
 
 unsigned char gaussian_kernel(int o, size_t stride, const unsigned char *m, const skepu2::Vec<float> stencil, size_t elemPerPx)
 {
-	float scaling = 1.0 / (o/elemPerPx*2+1) ;
 	float res = 0;
 
 	for(int i = -o; i <= o; i += elemPerPx){
@@ -198,7 +197,6 @@ constexpr static bool prefersMatrix = 0;
 #define VARIANT_CUDA(block)
 static inline SKEPU_ATTRIBUTE_FORCE_INLINE unsigned char OMP(int o, size_t stride, const unsigned char *m, const skepu2::Vec<float> stencil, size_t elemPerPx)
 {
-	float scaling = 1.0 / (o/elemPerPx*2+1) ;
 	float res = 0;
 
 	for(int i = -o; i <= o; i += elemPerPx){
@@ -217,7 +215,6 @@ static inline SKEPU_ATTRIBUTE_FORCE_INLINE unsigned char OMP(int o, size_t strid
 #define VARIANT_CUDA(block) block
 static inline SKEPU_ATTRIBUTE_FORCE_INLINE unsigned char CPU(int o, size_t stride, const unsigned char *m, const skepu2::Vec<float> stencil, size_t elemPerPx)
 {
-	float scaling = 1.0 / (o/elemPerPx*2+1) ;
 	float res = 0;
 
 	for(int i = -o; i <= o; i += elemPerPx){
