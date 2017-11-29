@@ -28,12 +28,30 @@
 
 unsigned char median_kernel(int ox, int oy, size_t stride, const unsigned char *image, size_t elemPerPx)
 {
+	/*
 	float median;
+	size_t size = (ox*2+1)*(oy*2+1);
+
+	float currLargest = -1, prevLargest = -1;
+
+	for(int i = 0; i < size/2; i++)
+	{
+		for (int y = -oy; y <= oy; ++y){
+			for (int x = -ox; x <= ox; x += elemPerPx){
+					if(currLargest < image[y*(int)stride+x])
+						currLargest = image[y*(int)stride+x];
+			}
+		}
+	}
+	*/
+
+
+
 
 	size_t size = (ox*2+1)*(oy*2+1);
 
 	// Convert to 1D-Array
-	float values[size];
+	float values[4000];
 
 	int a = 0;
 	for (int y = -oy; y <= oy; ++y){
@@ -47,7 +65,7 @@ unsigned char median_kernel(int ox, int oy, size_t stride, const unsigned char *
 
 	// Insertion sort
 	int i=0, j=0, tmp;
-	while(i<size){
+	while(i<a){
 
 		j=i;
 		while(j>0 && values[j-1] > values[j]){
@@ -60,9 +78,10 @@ unsigned char median_kernel(int ox, int oy, size_t stride, const unsigned char *
 		i = i+1;
 	}
 
-	median = values[size/2];
+	float median = values[a/2];
 
 	return median;
+
 
 	/*
 	float scaling = 1.0 / ((ox/elemPerPx*2+1)*(oy*2+1));
@@ -96,12 +115,30 @@ constexpr static bool prefersMatrix = 0;
 #define VARIANT_CUDA(block)
 static inline SKEPU_ATTRIBUTE_FORCE_INLINE unsigned char OMP(int ox, int oy, size_t stride, const unsigned char *image, size_t elemPerPx)
 {
+	/*
 	float median;
+	size_t size = (ox*2+1)*(oy*2+1);
+
+	float currLargest = -1, prevLargest = -1;
+
+	for(int i = 0; i < size/2; i++)
+	{
+		for (int y = -oy; y <= oy; ++y){
+			for (int x = -ox; x <= ox; x += elemPerPx){
+					if(currLargest < image[y*(int)stride+x])
+						currLargest = image[y*(int)stride+x];
+			}
+		}
+	}
+	*/
+
+
+
 
 	size_t size = (ox*2+1)*(oy*2+1);
 
 	// Convert to 1D-Array
-	float values[size];
+	float values[4000];
 
 	int a = 0;
 	for (int y = -oy; y <= oy; ++y){
@@ -115,7 +152,7 @@ static inline SKEPU_ATTRIBUTE_FORCE_INLINE unsigned char OMP(int ox, int oy, siz
 
 	// Insertion sort
 	int i=0, j=0, tmp;
-	while(i<size){
+	while(i<a){
 
 		j=i;
 		while(j>0 && values[j-1] > values[j]){
@@ -128,9 +165,10 @@ static inline SKEPU_ATTRIBUTE_FORCE_INLINE unsigned char OMP(int ox, int oy, siz
 		i = i+1;
 	}
 
-	median = values[size/2];
+	float median = values[a/2];
 
 	return median;
+
 
 	/*
 	float scaling = 1.0 / ((ox/elemPerPx*2+1)*(oy*2+1));
@@ -152,12 +190,30 @@ static inline SKEPU_ATTRIBUTE_FORCE_INLINE unsigned char OMP(int ox, int oy, siz
 #define VARIANT_CUDA(block) block
 static inline SKEPU_ATTRIBUTE_FORCE_INLINE unsigned char CPU(int ox, int oy, size_t stride, const unsigned char *image, size_t elemPerPx)
 {
+	/*
 	float median;
+	size_t size = (ox*2+1)*(oy*2+1);
+
+	float currLargest = -1, prevLargest = -1;
+
+	for(int i = 0; i < size/2; i++)
+	{
+		for (int y = -oy; y <= oy; ++y){
+			for (int x = -ox; x <= ox; x += elemPerPx){
+					if(currLargest < image[y*(int)stride+x])
+						currLargest = image[y*(int)stride+x];
+			}
+		}
+	}
+	*/
+
+
+
 
 	size_t size = (ox*2+1)*(oy*2+1);
 
 	// Convert to 1D-Array
-	float values[size];
+	float values[4000];
 
 	int a = 0;
 	for (int y = -oy; y <= oy; ++y){
@@ -171,7 +227,7 @@ static inline SKEPU_ATTRIBUTE_FORCE_INLINE unsigned char CPU(int ox, int oy, siz
 
 	// Insertion sort
 	int i=0, j=0, tmp;
-	while(i<size){
+	while(i<a){
 
 		j=i;
 		while(j>0 && values[j-1] > values[j]){
@@ -184,9 +240,10 @@ static inline SKEPU_ATTRIBUTE_FORCE_INLINE unsigned char CPU(int ox, int oy, siz
 		i = i+1;
 	}
 
-	median = values[size/2];
+	float median = values[a/2];
 
 	return median;
+
 
 	/*
 	float scaling = 1.0 / ((ox/elemPerPx*2+1)*(oy*2+1));

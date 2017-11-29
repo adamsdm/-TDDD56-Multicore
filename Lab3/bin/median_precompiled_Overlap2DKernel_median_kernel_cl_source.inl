@@ -44,12 +44,30 @@ size_t get_device_id()
 
 static unsigned char median_kernel(int ox, int oy, size_t stride, __local const unsigned char * image, size_t elemPerPx)
 {
+	/*
 	float median;
+	size_t size = (ox*2+1)*(oy*2+1);
+
+	float currLargest = -1, prevLargest = -1;
+
+	for(int i = 0; i < size/2; i++)
+	{
+		for (int y = -oy; y <= oy; ++y){
+			for (int x = -ox; x <= ox; x += elemPerPx){
+					if(currLargest < image[y*(int)stride+x])
+						currLargest = image[y*(int)stride+x];
+			}
+		}
+	}
+	*/
+
+
+
 
 	size_t size = (ox*2+1)*(oy*2+1);
 
 	// Convert to 1D-Array
-	float values[size];
+	float values[4000];
 
 	int a = 0;
 	for (int y = -oy; y <= oy; ++y){
@@ -63,7 +81,7 @@ static unsigned char median_kernel(int ox, int oy, size_t stride, __local const 
 
 	// Insertion sort
 	int i=0, j=0, tmp;
-	while(i<size){
+	while(i<a){
 
 		j=i;
 		while(j>0 && values[j-1] > values[j]){
@@ -76,9 +94,10 @@ static unsigned char median_kernel(int ox, int oy, size_t stride, __local const 
 		i = i+1;
 	}
 
-	median = values[size/2];
+	float median = values[a/2];
 
 	return median;
+
 
 	/*
 	float scaling = 1.0 / ((ox/elemPerPx*2+1)*(oy*2+1));
