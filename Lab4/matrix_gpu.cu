@@ -4,26 +4,31 @@
 
 #include <stdio.h>
 
+// nvcc matrix_gpu.cu -o matrix_gpu && ./matrix_gpu
 
-const int N = 1024;
-const int blocksize = 3;
+const int N = 1024;					// Size of matrix
+const int gridsize = 16;	// Num blocks
+const int blocksize = 64;	// Num threads per block
+
 
 __global__ void add_matrix(float *a, float *b, float *c) {
-	
-	int index;
+
+	// Good coaslecing
+	//int row = blockIdx.y * blockDim.y + threadIdx.y;
+	//int col = blockIdx.x * blockDim.x + threadIdx.x;
+
+	// Bad
 	int row = blockIdx.y * blockDim.y + threadIdx.y;
 	int col = blockIdx.x * blockDim.x + threadIdx.x;
 
-
 	if (row < N && col < N)
-		c[row + col*N] = a[row + col*N] + b[row + col*N];
+		c[row*N + col] = a[row*N + col] + b[row*N + col];
 
 }
 
 int main()
 {
 	float gpuTime = 0;
-	float cpuTime = 0;
 
 	float *a = new float[N*N];
 	float *b = new float[N*N];
@@ -39,21 +44,19 @@ int main()
 	// Initialize matrices
 	for (int i = 0; i < N; i++){
 		for (int j = 0; j < N; j++){
-			a[i + j*N] = i;
-			b[i + j*N] = 2*i;
+			int index = i*N + j;
+			a[index] = index;
+			b[index] = 2*index;
 		}
 	}
 
 	cudaMemcpy(d_a, a, N * N * sizeof(float), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_b, b, N * N * sizeof(float), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_c, c, N * N * sizeof(float), cudaMemcpyHostToDevice);
-	
-	// Optimal solution
-	dim3 threadsPerBlock(16, 16);
-	dim3 numBlocks(N / threadsPerBlock.x, N / threadsPerBlock.y);
-	
-	//dim3 threadsPerBlock(N, N);
-	//dim3 numBlocks(1, 1);
+
+
+	dim3 threadsPerBlock(gridsize, gridsize);
+	dim3 numBlocks(blocksize, blocksize);
 
 	// Timing
 	cudaEvent_t start, stop;
@@ -68,28 +71,35 @@ int main()
 
 	cudaEventSynchronize(stop);
 	cudaEventElapsedTime(&gpuTime, start, stop);
-	
+
 
 	// sync threads
-	
+
 	cudaMemcpy(c, d_c, N * N * sizeof(float), cudaMemcpyDeviceToHost);
-	
+
 	cudaFree(d_a);
 	cudaFree(d_b);
 	cudaFree(d_c);
-	
+
+
 	// Asert result is correct
+
 	for (int i = 0; i < N; i++) {
 		for (int j = 0; j < N; j++) {
-			int index = i + j*N;
-
+			int index = i*N + j;
 			if (c[index] != a[index] + b[index]) {
 				printf("Error: %f + %f != %f\n", a[index], b[index], c[index]);
-				return;
+				return EXIT_FAILURE;
 			}
 		}
+	}
 
-		/*
+
+
+
+
+	/*
+	for (int i = 0; i < N; i++) {
 		// A
 		printf("|");
 		for (int j = 0; j < N; j++) {
@@ -110,17 +120,20 @@ int main()
 			printf("%.2f ", c[i + j*N]);
 		}
 		printf("|\t\n");
-		*/
+
 	}
+	*/
+
+
+
 
 	printf("Problem size: %i\t\n", N);
 	printf("GPU Time: \t%f\n", gpuTime);
-	printf("CPU Time: \t%f\n", cpuTime);
 
 
 	delete[] a;
 	delete[] b;
 	delete[] c;
-	
-    return 0;
+
+  return 0;
 }
