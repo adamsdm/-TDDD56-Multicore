@@ -19,6 +19,7 @@
 
 unsigned char median_kernel(int ox, int oy, size_t stride, const unsigned char *image, size_t elemPerPx)
 {
+
 	// Convert to 1D-Array
 	float values[4000];
 
@@ -50,16 +51,6 @@ unsigned char median_kernel(int ox, int oy, size_t stride, const unsigned char *
 	float median = values[a/2];
 
 	return median;
-
-
-	/*
-	float scaling = 1.0 / ((ox/elemPerPx*2+1)*(oy*2+1));
-	float res = 0;
-	for (int y = -oy; y <= oy; ++y)
-		for (int x = -ox; x <= ox; x += elemPerPx)
-			res += image[y*(int)stride+x];
-	return res * scaling;
-	*/
 }
 
 
