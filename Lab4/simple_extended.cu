@@ -35,7 +35,7 @@ int main()
 	for (int i = 0; i < N; i++) {
 		a[i] = i;
 	}
-	
+
 	cudaMemcpy(da, a, N * sizeof(float), cudaMemcpyHostToDevice);
 	cudaMemcpy(db, b, N * sizeof(float), cudaMemcpyHostToDevice);
 
@@ -43,13 +43,15 @@ int main()
 	dim3 dimGrid(1, 1);
 	simple <<<dimGrid, dimBlock >>> (da, db);
 
+	cudaThreadSynchronize();
+
 	cudaMemcpy(b, db, N * sizeof(float), cudaMemcpyDeviceToHost);
 
 	for (int i = 0; i < N; i++)
 	{
-		printf("%.2f^2 = %.2f\n", a[i], b[i]);
+		printf("GPU: %f^2 = %f\t CPU: %f\n", a[i], b[i], a[i]*a[i]);
+
 	}
 
-	
 	return EXIT_SUCCESS;
 }
