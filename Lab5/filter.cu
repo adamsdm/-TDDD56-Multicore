@@ -37,7 +37,7 @@
 #define maxKernelSizeX 20
 #define maxKernelSizeY 20
 
-#define SUB_SIZE 12
+#define SUB_SIZE 16
 #define FILTER_RAD 4
 
 
@@ -45,11 +45,8 @@ __global__ void filter(unsigned char *image, unsigned char *out, const unsigned 
 {
 
   // map from blockIdx to pixel position
-	int x = blockIdx.x * blockDim.x + threadIdx.x - kernelsizex * (blockIdx.x+4);
-	int y = blockIdx.y * blockDim.y + threadIdx.y - kernelsizey * (blockIdx.y+4);
-
-  y = min(max(y, 0), imagesizey-1);
-  x = min(max(x, 0), imagesizex-1);
+	int x = blockIdx.x * blockDim.x + threadIdx.x;
+	int y = blockIdx.y * blockDim.y + threadIdx.y;
 
   unsigned const int SHARED_SIZE = (2*maxKernelSizeX+1)*(2*maxKernelSizeY+1);
   const int sharedIndx = threadIdx.x + threadIdx.y * blockDim.x;
@@ -68,29 +65,28 @@ __global__ void filter(unsigned char *image, unsigned char *out, const unsigned 
   int localX = threadIdx.x;
 
   sumx=0;sumy=0;sumz=0;
-  if (localX < blockDim.x + kernelsizex && localY < blockDim.y + kernelsizey &&
-      localX > kernelsizex && localY > kernelsizey){ // If inside kernel
 
-    for(int dy=-kernelsizey;dy<=kernelsizey;dy++){
-  		for(int dx=-kernelsizex;dx<=kernelsizex;dx++){
+  for(int dy=-kernelsizey;dy<=kernelsizey;dy++){
+		for(int dx=-kernelsizex;dx<=kernelsizex;dx++){
+      int yy = min(max(localY+dy, 0), blockDim.y-1);
+			int xx = min(max(localX+dx, 0), blockDim.x-1);
 
-        int yy = localY + dy;
-        int xx = localX + dx;
-        //int yy = min(max(localY+dy, 0), blockDim.y-1);
-  			//int xx = min(max(localX+dx, 0), blockDim.x-1);
+      int pixIndex = (yy)*blockDim.x+(xx);
 
-        int pixIndex = (yy)*blockDim.x+(xx);
+      int r = cacheShared[(pixIndex)*3+0];
+      int g = cacheShared[(pixIndex)*3+1];
+      int b = cacheShared[(pixIndex)*3+2];
 
-  			sumx += cacheShared[(pixIndex)*3+0];
-  			sumy += cacheShared[(pixIndex)*3+1];
-  			sumz += cacheShared[(pixIndex)*3+2];
-      }
+			sumx += r;
+			sumy += g;
+			sumz += b;
     }
-
-    out[(y*imagesizex+x)*3+0] = sumx/divby;
-  	out[(y*imagesizex+x)*3+1] = sumy/divby;
-  	out[(y*imagesizex+x)*3+2] = sumz/divby;
   }
+
+  out[(y*imagesizex+x)*3+0] = sumx/divby;
+	out[(y*imagesizex+x)*3+1] = sumy/divby;
+	out[(y*imagesizex+x)*3+2] = sumz/divby;
+
 
 
   /*
@@ -144,7 +140,7 @@ void computeImages(int kernelsizex, int kernelsizey)
 	cudaMalloc( (void**)&dev_bitmap, imagesizex*imagesizey*3);
 
   dim3 grid(imagesizex/SUB_SIZE,imagesizey/SUB_SIZE);
-  dim3 block(SUB_SIZE + kernelsizex*2, SUB_SIZE + kernelsizey*2);
+  dim3 block(SUB_SIZE, SUB_SIZE);
 
 	filter<<<grid,block>>>(dev_input, dev_bitmap, imagesizey, imagesizex, kernelsizex, kernelsizey); // Awful load balance
 	cudaThreadSynchronize();
