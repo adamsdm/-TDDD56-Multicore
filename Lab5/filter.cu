@@ -53,6 +53,19 @@ __global__ void filter(unsigned char *image, unsigned char *out, const unsigned 
 
   __shared__ int cacheShared[SHARED_SIZE];
 
+
+  int dy, dx;
+  int localY = threadIdx.y;
+  int localX = threadIdx.x;
+
+  // Write adjecent area to shared memory
+  for(dy=-kernelsizey;dy<=kernelsizey;dy++){
+		for(dx=-kernelsizex;dx<=kernelsizex;dx++){
+      
+    }
+  }
+
+
   cacheShared[sharedIndx * 3 + 0] = image[(y*imagesizex + x)*3 + 0];
   cacheShared[sharedIndx * 3 + 1] = image[(y*imagesizex + x)*3 + 1];
   cacheShared[sharedIndx * 3 + 2] = image[(y*imagesizex + x)*3 + 2];
@@ -61,13 +74,13 @@ __global__ void filter(unsigned char *image, unsigned char *out, const unsigned 
   unsigned int divby = (2*kernelsizex+1)*(2*kernelsizey+1);
 
   unsigned int sumx, sumy, sumz;
-  int localY = threadIdx.y;
-  int localX = threadIdx.x;
+  localY = threadIdx.y;
+  localX = threadIdx.x;
 
   sumx=0;sumy=0;sumz=0;
 
-  for(int dy=-kernelsizey;dy<=kernelsizey;dy++){
-		for(int dx=-kernelsizex;dx<=kernelsizex;dx++){
+  for(dy=-kernelsizey;dy<=kernelsizey;dy++){
+		for(dx=-kernelsizex;dx<=kernelsizex;dx++){
       int yy = min(max(localY+dy, 0), blockDim.y-1);
 			int xx = min(max(localX+dx, 0), blockDim.x-1);
 
