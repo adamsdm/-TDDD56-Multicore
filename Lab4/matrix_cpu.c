@@ -21,11 +21,11 @@ void add_matrix(float *a, float *b, float *c, int N)
 
 int main()
 {
-	const int N = 825;
+	const int N = 4*1024;
 
-	float a[N*N];
-	float b[N*N];
-	float c[N*N];
+	float *a = (float*)malloc(N*N * sizeof(float));
+	float *b = (float*)malloc(N*N * sizeof(float));
+	float *c = (float*)malloc(N*N * sizeof(float));
 
 	for (int i = 0; i < N; i++)
 		for (int j = 0; j < N; j++)

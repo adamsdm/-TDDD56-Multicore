@@ -6,9 +6,9 @@
 
 // nvcc matrix_gpu.cu -o matrix_gpu && ./matrix_gpu
 
-const int N = 1024;					// Size of matrix
-const int gridsize = 16;	// Num blocks
-const int blocksize = 64;	// Num threads per block
+const int N = 4*1024;					// Size of matrix
+const int gridsize = 4;	// Num blocks
+const int blocksize = 1024;	// Num threads per block
 
 
 __global__ void add_matrix(float *a, float *b, float *c) {
@@ -128,7 +128,7 @@ int main()
 
 
 	printf("Problem size: %i\t\n", N);
-	printf("GPU Time: \t%f\n", gpuTime);
+	printf("GPU Time: \t%f\n", gpuTime/1000.0f);
 
 
 	delete[] a;
