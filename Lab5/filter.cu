@@ -34,17 +34,23 @@
 #include "milli.h"
 
 // Use these for setting shared memory size.
-#define maxKernelSizeX 10
-#define maxKernelSizeY 10
+#define maxKernelSizeX 20
+#define maxKernelSizeY 20
+
+#define SUB_SIZE 12
+#define FILTER_RAD 4
 
 
 __global__ void filter(unsigned char *image, unsigned char *out, const unsigned int imagesizey, const unsigned int imagesizex, const int kernelsizex, const int kernelsizey)
 {
-  // map from blockIdx to pixel position
-	int x = blockIdx.x * blockDim.x + threadIdx.x;
-	int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-  unsigned int divby = (2*kernelsizex+1)*(2*kernelsizey+1);
+  // map from blockIdx to pixel position
+	int x = blockIdx.x * blockDim.x + threadIdx.x - kernelsizex * (blockIdx.x+4);
+	int y = blockIdx.y * blockDim.y + threadIdx.y - kernelsizey * (blockIdx.y+4);
+
+  y = min(max(y, 0), imagesizey-1);
+  x = min(max(x, 0), imagesizex-1);
+
   unsigned const int SHARED_SIZE = (2*maxKernelSizeX+1)*(2*maxKernelSizeY+1);
   const int sharedIndx = threadIdx.x + threadIdx.y * blockDim.x;
 
@@ -55,38 +61,44 @@ __global__ void filter(unsigned char *image, unsigned char *out, const unsigned 
   cacheShared[sharedIndx * 3 + 2] = image[(y*imagesizex + x)*3 + 2];
   __syncthreads();
 
-  // Do the actual filtering
-  /*
-  out[(y*imagesizex+x)*3+0] = cacheShared[sharedIndx * 3 + 0];
-	out[(y*imagesizex+x)*3+1] = cacheShared[sharedIndx * 3 + 1];
-	out[(y*imagesizex+x)*3+2] = cacheShared[sharedIndx * 3 + 2];
-  */
-
+  unsigned int divby = (2*kernelsizex+1)*(2*kernelsizey+1);
 
   unsigned int sumx, sumy, sumz;
-  sumx=0;sumy=0;sumz=0;
-  for(int dy=-kernelsizey;dy<=kernelsizey;dy++){
-		for(int dx=-kernelsizex;dx<=kernelsizex;dx++){
-      int yy = min(max(y+dy, 0), blockDim.y-1);
-			int xx = min(max(x+dx, 0), blockDim.x-1);
-      int pixIndex = (yy)*blockDim.x+(xx);
+  int localY = threadIdx.y;
+  int localX = threadIdx.x;
 
-			sumx += cacheShared[(pixIndex)*3+0];
-			sumy += cacheShared[(pixIndex)*3+1];
-			sumz += cacheShared[(pixIndex)*3+2];
+  sumx=0;sumy=0;sumz=0;
+  if (localX < blockDim.x + kernelsizex && localY < blockDim.y + kernelsizey &&
+      localX > kernelsizex && localY > kernelsizey){ // If inside kernel
+
+    for(int dy=-kernelsizey;dy<=kernelsizey;dy++){
+  		for(int dx=-kernelsizex;dx<=kernelsizex;dx++){
+
+        int yy = localY + dy;
+        int xx = localX + dx;
+        //int yy = min(max(localY+dy, 0), blockDim.y-1);
+  			//int xx = min(max(localX+dx, 0), blockDim.x-1);
+
+        int pixIndex = (yy)*blockDim.x+(xx);
+
+  			sumx += cacheShared[(pixIndex)*3+0];
+  			sumy += cacheShared[(pixIndex)*3+1];
+  			sumz += cacheShared[(pixIndex)*3+2];
+      }
     }
+
+    out[(y*imagesizex+x)*3+0] = sumx/divby;
+  	out[(y*imagesizex+x)*3+1] = sumy/divby;
+  	out[(y*imagesizex+x)*3+2] = sumz/divby;
   }
 
-  out[(y*imagesizex+x)*3+0] = sumx/divby;
-	out[(y*imagesizex+x)*3+1] = sumy/divby;
-	out[(y*imagesizex+x)*3+2] = sumz/divby;
 
   /*
-  int dy, dx;
-  unsigned int sumx, sumy, sumz;
-
+  // Original
   int divby = (2*kernelsizex+1)*(2*kernelsizey+1); // Works for box filters only!
+  int dy, dx;
 
+  unsigned int sumx, sumy, sumz;
 	if (x < imagesizex && y < imagesizey) // If inside image
 	{
 // Filter kernel (simple box filter)
@@ -97,11 +109,10 @@ __global__ void filter(unsigned char *image, unsigned char *out, const unsigned 
 			// Use max and min to avoid branching!
 			int yy = min(max(y+dy, 0), imagesizey-1);
 			int xx = min(max(x+dx, 0), imagesizex-1);
-      int pixIndex = (yy)*imagesizex+(xx);
 
-			sumx += image[(pixIndex)*3+0];
-			sumy += image[(pixIndex)*3+1];
-			sumz += image[(pixIndex)*3+2];
+			sumx += image[((yy)*imagesizex+(xx))*3+0];
+			sumy += image[((yy)*imagesizex+(xx))*3+1];
+			sumz += image[((yy)*imagesizex+(xx))*3+2];
 		}
 	out[(y*imagesizex+x)*3+0] = sumx/divby;
 	out[(y*imagesizex+x)*3+1] = sumy/divby;
@@ -131,8 +142,10 @@ void computeImages(int kernelsizex, int kernelsizey)
 	cudaMalloc( (void**)&dev_input, imagesizex*imagesizey*3);
 	cudaMemcpy( dev_input, image, imagesizey*imagesizex*3, cudaMemcpyHostToDevice );
 	cudaMalloc( (void**)&dev_bitmap, imagesizex*imagesizey*3);
-	dim3 grid(imagesizex/2,imagesizey/2);
-  dim3 block(2,2);
+
+  dim3 grid(imagesizex/SUB_SIZE,imagesizey/SUB_SIZE);
+  dim3 block(SUB_SIZE + kernelsizex*2, SUB_SIZE + kernelsizey*2);
+
 	filter<<<grid,block>>>(dev_input, dev_bitmap, imagesizey, imagesizex, kernelsizex, kernelsizey); // Awful load balance
 	cudaThreadSynchronize();
 //	Check for errors!
@@ -188,7 +201,7 @@ int main( int argc, char** argv)
 
 	ResetMilli();
 
-	computeImages(2, 2);
+	computeImages(FILTER_RAD, FILTER_RAD);
 
 // You can save the result to a file like this:
 //	writeppm("out.ppm", imagesizey, imagesizex, pixels);
