@@ -24,20 +24,20 @@ int clock_gettime(int clk_id, struct timespec *t)
  *  Copyright 2011 Nicolas Melot
  *
  * This file is part of TDDD56.
- * 
+ *
  *     TDDD56 is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
  *     the Free Software Foundation, either version 3 of the License, or
  *     (at your option) any later version.
- * 
+ *
  *     TDDD56 is distributed in the hope that it will be useful,
  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *     GNU General Public License for more details.
- * 
+ *
  *     You should have received a copy of the GNU General Public License
  *     along with TDDD56. If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
 
 #include <stdio.h>
@@ -132,7 +132,7 @@ stack_measure_pop(void* arg)
     clock_gettime(CLOCK_MONOTONIC, &t_stop[args->id]);
 
     return NULL;
-    
+
   }
 
 
@@ -159,7 +159,7 @@ stack_measure_push(void* arg)
 void
 test_init()
 {
-  
+
 }
 
 void
@@ -171,7 +171,7 @@ test_setup()
   // Allocate a new stack and reset its values
   stack = malloc(sizeof(stack_tt));
   stack_init(stack);
-  
+
   size_t i;
   size_t j;
   for(i=0; i<NB_THREADS;i++){
@@ -195,14 +195,14 @@ void
 test_finalize()
 {
   // Destroy properly your test batch
-  
+
 }
 
 // Push from one thread
 void *thread_stack_push(void* arg){
   stack_measure_arg_t *args = (stack_measure_arg_t*) arg;
   int id = args->id;
-  
+
   node_tt *newNode;
   size_t i;
   for (i = 0; i < (MAX_PUSH_POP/NB_THREADS); i++)
@@ -232,14 +232,14 @@ test_push_safe()
   }
 
   int correct_sum = 0, actual_sum = 0;
-  
+
   for(i=0; i<NB_THREADS; i++){
     for(j=0; j<(MAX_PUSH_POP/NB_THREADS); j++){
       correct_sum += 123;
     }
   }
- 
-  
+
+
   node_tt *it = stack->head;
   int count = 0;
   while(it != NULL){
@@ -248,9 +248,9 @@ test_push_safe()
    count++;
   }
 
-  
-  
-  
+
+
+
   // Wait for all threads to finish before proceeding
   for(i=0; i<NB_THREADS; i++){
       pthread_join(thread[i], NULL);
@@ -268,13 +268,13 @@ test_push_safe()
 // Pop from one thread
 void *thread_stack_pop(void *arg)
 {
-  
+
   stack_measure_arg_t *args = (stack_measure_arg_t *)arg;
   int id = args->id;
 
   size_t i;
   node_tt *tmp;
-  
+
   for (i = 0; i < (MAX_PUSH_POP / NB_THREADS); i++)
   {
     tmp = stack->head;
@@ -287,13 +287,13 @@ void *thread_stack_pop(void *arg)
 
 int
 test_pop_safe()
-{ 
+{
 
   node_tt *tmp;
   int i, j;
   for(i=0; i<NB_THREADS; i++){
     for(j=0; j< MAX_PUSH_POP/NB_THREADS ; j++){
-      tmp = node_pool[i]->head;      
+      tmp = node_pool[i]->head;
       stack_pop(node_pool[i]);
       stack_push(stack, tmp);
     }
@@ -325,10 +325,11 @@ test_pop_safe()
 
 
 
-
+#if NON_BLOCKING == 1 || NON_BLOCKING == 2
 
 // 3 Threads should be enough to raise and detect the ABA problem
 #define ABA_NB_THREADS 3
+
 
 pthread_mutex_t *aba_locks[4];
 pthread_t thread0;
@@ -345,7 +346,7 @@ void aba_thread_pop(node_tt **n, pthread_mutex_t *mylock, pthread_mutex_t *other
   {
     old = stack->head;
     next = old->next;
-    
+
 
     if (otherlock != NULL)
       pthread_mutex_unlock(otherlock);
@@ -415,7 +416,7 @@ void aba_thread_pop(node_tt **n, pthread_mutex_t *mylock, pthread_mutex_t *other
   {
     // wait for t0 to TRY and pop A
     // wait for t1 to pop A
-    pthread_mutex_lock(aba_locks[2]);    
+    pthread_mutex_lock(aba_locks[2]);
     node_tt *n = NULL;
     printf("T2: Pop B... ");
     aba_thread_pop(&n, NULL, NULL);
@@ -425,6 +426,7 @@ void aba_thread_pop(node_tt **n, pthread_mutex_t *mylock, pthread_mutex_t *other
 
     return NULL;
   }
+#endif
 
   int test_aba()
   {
@@ -456,12 +458,12 @@ void aba_thread_pop(node_tt **n, pthread_mutex_t *mylock, pthread_mutex_t *other
     pthread_mutex_init(aba_locks[i], 0);
     pthread_mutex_lock(aba_locks[i]);
   }
-  
+
 
   // Initialize threads
   pthread_attr_t attr;
   pthread_attr_init(&attr);
-  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);   
+  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
   // Start working...
   pthread_create(&thread0, &attr, &aba_thread_0, NULL);
@@ -519,7 +521,7 @@ typedef struct thread_test_cas_args thread_test_cas_args_t;
 void*
 thread_test_cas(void* arg)
 {
-  
+
 #if NON_BLOCKING != 0
   thread_test_cas_args_t *args = (thread_test_cas_args_t*) arg;
   int i;
@@ -558,7 +560,7 @@ test_cas()
 
   counter = 0;
   pthread_attr_init(&attr);
-  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE); 
+  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
   pthread_mutexattr_init(&mutex_attr);
   pthread_mutex_init(&lock, &mutex_attr);
 
@@ -595,7 +597,7 @@ setbuf(stdout, NULL);
 // MEASURE == 0 -> run unit tests
 #if MEASURE == 0
   test_init();
-  
+
   test_run(test_cas);
 
   test_run(test_push_safe);
@@ -604,28 +606,28 @@ setbuf(stdout, NULL);
 
   test_finalize();
 #else
-  
+
   pthread_t thread[NB_THREADS];
   pthread_attr_t attr;
   stack_measure_arg_t arg[NB_THREADS];
   pthread_attr_init(&attr);
 
   test_setup();
-  
+
 
 
   #if MEASURE == 1
-    
+
   node_tt *tmp;
   int i, j;
   for(i=0; i<NB_THREADS; i++){
     for(j=0; j< MAX_PUSH_POP/NB_THREADS ; j++){
-      tmp = node_pool[i]->head;      
+      tmp = node_pool[i]->head;
       stack_pop(node_pool[i]);
       stack_push(stack, tmp);
     }
   }
-    
+
   #endif
   clock_gettime(CLOCK_MONOTONIC, &start);
   for (i = 0; i < NB_THREADS; i++)
@@ -643,12 +645,12 @@ setbuf(stdout, NULL);
   {
     pthread_join(thread[i], NULL);
   }
-  
+
   clock_gettime(CLOCK_MONOTONIC, &stop);
-  
+
 
   printf("%d \t %f\n", NB_THREADS, timediff(&start, &stop));
-  
+
   // Print out results
   for (i = 0; i < NB_THREADS; i++)
     {
