@@ -5,6 +5,9 @@
 // Compilation line for Linux:
 // test$ gcc -std=c99 find_max.c -o find_max milli.c CLutilities.c -lOpenCL  -I/usr/local/cuda/include/
 
+// Compilation line for OSX:
+// gcc -std=c99 find_max.c -o find_max milli.c CLutilities.c -framework OpenCL
+
 // C implementation included.
 // The OpenCL kernel is just a placeholder.
 // Implement reduction in OpenCL!
