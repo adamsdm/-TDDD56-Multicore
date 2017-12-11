@@ -29,7 +29,7 @@
 #include "milli.h"
 
 // Size of data!
-#define kDataLength 1024
+#define kDataLength 1 * 100000*1024
 #define MAXPRINTSIZE 16
 
 unsigned int *generateRandomData(unsigned int length)
@@ -82,7 +82,8 @@ void runKernel(cl_kernel kernel, int threads, cl_mem data, unsigned int length)
 	
 	// Synch
 	clWaitForEvents(1, &event);
-	printCLError(ciErrNum,10);
+  printCLError(ciErrNum,10);
+  
 }
 
 
@@ -108,7 +109,12 @@ int find_max_gpu(unsigned int *data, unsigned int length)
 	// Synch
 	clWaitForEvents(1, &event);
 	printCLError(ciErrNum,10);
-  
+
+  for(int i=0; i<length; i+=512){
+    if(data[i] > data[0])
+      data[0] = data[i];
+  }
+
 	clReleaseMemObject(io_data);
 	return ciErrNum;
 }

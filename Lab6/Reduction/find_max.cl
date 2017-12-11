@@ -31,21 +31,7 @@ __kernel void find_max(__global unsigned int *data, const unsigned int length)
   // Write this back to the data at the global index position
   if(local_index == 0){
     data[index] = sharedMem[local_index];
-    printf("%d\n", data[index]);
-
   }
-
-  // Let global thread 0 find the max in each work group
-  // Could be optimized by doing this on the CPU instead
-  barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE); // Sync work items
-
-  if(index==0){
-    for(int i=0; i<= sharedSize; i+= local_size){
-      if(data[i] > data[index])
-        data[index] = data[i];
-    }
-  }
-  
 }
 
 
