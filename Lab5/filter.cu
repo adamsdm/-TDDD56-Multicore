@@ -38,96 +38,113 @@
 #define maxKernelSizeY 20
 
 #define SUB_SIZE 16
-#define FILTER_RAD 4
+#define FILTER_RAD_X 8
+#define FILTER_RAD_Y 8
 
+
+__device__ const unsigned int CACHE_SIZE_X = (2 * maxKernelSizeX + 1) * 3; // RGB
+__device__ const unsigned int CACHE_SIZE_Y = 2 * maxKernelSizeY + 1;
+
+__shared__ int cacheShared[CACHE_SIZE_X][CACHE_SIZE_Y];
+
+__device__ void addPadding(unsigned char *image, int kernelsizex, int kernelsizey, int imagesizex, int imagesizey){
+
+  int x = blockIdx.x * blockDim.x + threadIdx.x;
+	int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+  for (int yy = 0; yy < blockDim.y + 2*kernelsizey; yy++) {
+    for (int xx = 0; xx < (blockDim.x + 2 * kernelsizex); xx++) {
+
+      int globalX = min(max(x + xx, 0), imagesizex - 1);
+      int globalY = min(max(y + yy, 0), imagesizey - 1);
+
+      cacheShared[xx * 3 + 0][yy] = image[( globalY*imagesizex + globalX ) * 3 + 0];
+      cacheShared[xx * 3 + 1][yy] = image[( globalY*imagesizex + globalX ) * 3 + 1];
+      cacheShared[xx * 3 + 2][yy] = image[( globalY*imagesizex + globalX ) * 3 + 2];
+    }
+  }
+}
 
 __global__ void filter(unsigned char *image, unsigned char *out, const unsigned int imagesizey, const unsigned int imagesizex, const int kernelsizex, const int kernelsizey)
 {
-
   // map from blockIdx to pixel position
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
 	int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-  unsigned const int SHARED_SIZE = (2*maxKernelSizeX+1)*(2*maxKernelSizeY+1);
-  const int sharedIndx = threadIdx.x + threadIdx.y * blockDim.x;
 
-  __shared__ int cacheShared[SHARED_SIZE];
+	if (x > imagesizex) return;
+	if (y > imagesizey) return;
 
 
-  int dy, dx;
-  int localY = threadIdx.y;
-  int localX = threadIdx.x;
-
-  // Write adjecent area to shared memory
-  for(dy=-kernelsizey;dy<=kernelsizey;dy++){
-		for(dx=-kernelsizex;dx<=kernelsizex;dx++){
-      
-    }
+  // Single thread padding
+  if(threadIdx.x == 0 && threadIdx.y == 0){
+    addPadding(image, kernelsizex, kernelsizey, imagesizex, imagesizey);
   }
 
-
-  cacheShared[sharedIndx * 3 + 0] = image[(y*imagesizex + x)*3 + 0];
-  cacheShared[sharedIndx * 3 + 1] = image[(y*imagesizex + x)*3 + 1];
-  cacheShared[sharedIndx * 3 + 2] = image[(y*imagesizex + x)*3 + 2];
   __syncthreads();
 
-  unsigned int divby = (2*kernelsizex+1)*(2*kernelsizey+1);
+	// Print shared memory
+	if (blockIdx.y == 0 && blockIdx.x == 7 && threadIdx.x == 0 && threadIdx.y == 0) {
+		printf("\n");
 
-  unsigned int sumx, sumy, sumz;
-  localY = threadIdx.y;
-  localX = threadIdx.x;
+		for (int yy = 0; yy < blockDim.y + 2*kernelsizey; yy++) {
+			for (int xx = 0; xx < 3*(blockDim.x + 2 * kernelsizex); xx+=3) {
 
-  sumx=0;sumy=0;sumz=0;
+				if (cacheShared[xx][yy])
+					printf("%d ", cacheShared[xx][yy]);//printf("# ");
+				else
+					printf(".  ");
+			}
+			printf("\n");
+		}
 
-  for(dy=-kernelsizey;dy<=kernelsizey;dy++){
-		for(dx=-kernelsizex;dx<=kernelsizex;dx++){
-      int yy = min(max(localY+dy, 0), blockDim.y-1);
-			int xx = min(max(localX+dx, 0), blockDim.x-1);
+		printf("\n\n");
+	}
 
-      int pixIndex = (yy)*blockDim.x+(xx);
 
-      int r = cacheShared[(pixIndex)*3+0];
-      int g = cacheShared[(pixIndex)*3+1];
-      int b = cacheShared[(pixIndex)*3+2];
+	unsigned int divby = (2 * kernelsizex + 1)*(2 * kernelsizey + 1);
 
-			sumx += r;
-			sumy += g;
-			sumz += b;
+	unsigned int sumx, sumy, sumz;
+	int localY = threadIdx.y + kernelsizey;
+	int localX = threadIdx.x + kernelsizex;
+	sumx = 0; sumy = 0; sumz = 0;
+
+
+  // Print averaging for pixel 0
+  if (blockIdx.y == 0 && blockIdx.x == 7 && threadIdx.x == 0 && threadIdx.y == 0) {
+    for (int dy = -kernelsizey; dy <= kernelsizey; dy++) {
+      for (int dx = -kernelsizex; dx <= kernelsizex; dx++) {
+
+        int yy = localY + dy;
+        int xx = localX + dx;
+
+        printf("%d ", cacheShared[xx * 3 + 0][yy]);
+
+      }
+      printf("\n");
     }
   }
 
-  out[(y*imagesizex+x)*3+0] = sumx/divby;
-	out[(y*imagesizex+x)*3+1] = sumy/divby;
-	out[(y*imagesizex+x)*3+2] = sumz/divby;
 
+	//if (localX < blockDim.x + kernelsizex && localY < blockDim.y + kernelsizey &&
+	//	localX > kernelsizex && localY > kernelsizey) { // If inside kernel
+		for (int dy = -kernelsizey; dy <= kernelsizey; dy++) {
+			for (int dx = -kernelsizex; dx <= kernelsizex; dx++) {
 
+				int yy = localY + dy;
+				int xx = localX + dx;
 
-  /*
-  // Original
-  int divby = (2*kernelsizex+1)*(2*kernelsizey+1); // Works for box filters only!
-  int dy, dx;
-
-  unsigned int sumx, sumy, sumz;
-	if (x < imagesizex && y < imagesizey) // If inside image
-	{
-// Filter kernel (simple box filter)
-	sumx=0;sumy=0;sumz=0;
-	for(dy=-kernelsizey;dy<=kernelsizey;dy++)
-		for(dx=-kernelsizex;dx<=kernelsizex;dx++)
-		{
-			// Use max and min to avoid branching!
-			int yy = min(max(y+dy, 0), imagesizey-1);
-			int xx = min(max(x+dx, 0), imagesizex-1);
-
-			sumx += image[((yy)*imagesizex+(xx))*3+0];
-			sumy += image[((yy)*imagesizex+(xx))*3+1];
-			sumz += image[((yy)*imagesizex+(xx))*3+2];
+				sumx += cacheShared[xx * 3 + 0][yy];
+				sumy += cacheShared[xx * 3 + 1][yy];
+				sumz += cacheShared[xx * 3 + 2][yy];
+			}
 		}
-	out[(y*imagesizex+x)*3+0] = sumx/divby;
-	out[(y*imagesizex+x)*3+1] = sumy/divby;
-	out[(y*imagesizex+x)*3+2] = sumz/divby;
-	}
-  */
+	//}
+
+
+	out[(y*imagesizex + x) * 3 + 0] = sumx / divby;
+	out[(y*imagesizex + x) * 3 + 1] = sumy / divby;
+	out[(y*imagesizex + x) * 3 + 2] = sumz / divby;
 
 }
 
@@ -210,7 +227,7 @@ int main( int argc, char** argv)
 
 	ResetMilli();
 
-	computeImages(FILTER_RAD, FILTER_RAD);
+	computeImages(FILTER_RAD_X, FILTER_RAD_Y);
 
 // You can save the result to a file like this:
 //	writeppm("out.ppm", imagesizey, imagesizex, pixels);
